@@ -1,0 +1,10 @@
+{
+  "name": "@datafusion-ai/settings-service",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "build": "nest build"
+  }
+}

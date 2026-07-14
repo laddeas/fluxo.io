@@ -1,0 +1,75 @@
+# ============================================================================
+# DataFusion AI — Docker Compose for Local Development
+# Services: PostgreSQL, Redis, RabbitMQ (+ Management UIs)
+# ============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # PostgreSQL — Primary Database with pgVector extension
+  # --------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: datafusion-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: datafusion
+      POSTGRES_USER: datafusion
+      POSTGRES_PASSWORD: datafusion_dev_2024
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U datafusion"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --------------------------------------------------------------------------
+  # Redis — Cache, Sessions, Rate Limiting
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: datafusion-redis
+    restart: unless-stopped
+    command: redis-server --requirepass datafusion_redis_2024
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "datafusion_redis_2024", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --------------------------------------------------------------------------
+  # RabbitMQ — Message Broker with Management Plugin
+  # --------------------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: datafusion-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: datafusion
+      RABBITMQ_DEFAULT_PASS: datafusion_rabbit_2024
+      RABBITMQ_DEFAULT_VHOST: datafusion
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local

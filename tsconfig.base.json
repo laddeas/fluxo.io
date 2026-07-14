@@ -12,10 +12,21 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
-    "noUnusedLocals": true,
+    "noUnusedLocals": false,
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@datafusion-ai/source"]
+    "customConditions": ["@datafusion-ai/source"],
+    "ignoreDeprecations": "6.0",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
+    "baseUrl": ".",
+    "paths": {
+      "@datafusion-ai/shared-types": ["packages/shared-types/src/index.ts"],
+      "@datafusion-ai/shared-utils": ["packages/shared-utils/src/index.ts"],
+      "@datafusion-ai/database": ["packages/database/src/index.ts"],
+      "@datafusion-ai/connector-sdk": ["packages/connector-sdk/src/index.ts"]
+    }
   }
 }
