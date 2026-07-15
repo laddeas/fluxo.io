@@ -31,12 +31,17 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Drawer,
+  Divider,
+  Radio,
   FormControl,
   InputLabel,
   Select,
   Grid,
   Snackbar,
   Alert,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import {
   AddOutlined,
@@ -177,6 +182,129 @@ const typeIcons: Record<string, React.ReactElement> = {
   ENTERPRISE_APP: <CloudOutlined />,
 };
 
+const getInterfaceDetails = (item: any) => {
+  const defaults = {
+    s3Path: 's3://fluxo-ingest-bucket/default-files/',
+    fileSize: '45.2 KB',
+    fields: [
+      { name: 'id', type: 'INT', isPk: true, isNullable: false, length: '11', desc: 'Auto-increment primary key' },
+      { name: 'name', type: 'VARCHAR', isPk: false, isNullable: false, length: '100', desc: 'Resource name' },
+      { name: 'created_at', type: 'DATETIME', isPk: false, isNullable: true, length: '-', desc: 'Record timestamp' },
+    ],
+    sampleData: [
+      { id: '1', name: 'Sample Record A', created_at: '2026-07-14 10:00:00' },
+      { id: '2', name: 'Sample Record B', created_at: '2026-07-14 10:15:00' },
+    ]
+  };
+
+  if (!item) return defaults;
+
+  if (item.name.toLowerCase().includes('trade') || item.name.toLowerCase().includes('history')) {
+    return {
+      s3Path: 's3://fluxo-ingest-bucket/uploads/trade-history/',
+      fileSize: '33.6 KB',
+      fields: [
+        { name: 'id', type: 'UUID', isPk: true, isNullable: false, length: '36', desc: 'Unique trade execution identifier' },
+        { name: 'symbol', type: 'VARCHAR', isPk: false, isNullable: false, length: '20', desc: 'Trading symbol (e.g. BALKRISIND)' },
+        { name: 'optionType', type: 'VARCHAR', isPk: false, isNullable: false, length: '5', desc: 'Option or Future type (e.g. FUT)' },
+        { name: 'side', type: 'VARCHAR', isPk: false, isNullable: false, length: '4', desc: 'Buy or Sell direction' },
+        { name: 'quantity', type: 'INTEGER', isPk: false, isNullable: false, length: '-', desc: 'Number of units traded' },
+        { name: 'entryPrice', type: 'DECIMAL', isPk: false, isNullable: false, length: '12,2', desc: 'Trade entry price' },
+        { name: 'exitPrice', type: 'DECIMAL', isPk: false, isNullable: false, length: '12,2', desc: 'Trade exit price' },
+        { name: 'pnl', type: 'DECIMAL', isPk: false, isNullable: false, length: '12,2', desc: 'Net Profit and Loss' },
+        { name: 'entryTime', type: 'DATETIME', isPk: false, isNullable: false, length: '-', desc: 'Entry timestamp' },
+        { name: 'exitTime', type: 'DATETIME', isPk: false, isNullable: false, length: '-', desc: 'Exit timestamp' },
+      ],
+      sampleData: [
+        {
+          "id": "0471b2f0-dc97-45fc-8610-964053fcfb78",
+          "symbol": "BALKRISIND",
+          "expiry": "2026-05-28",
+          "strike": 0,
+          "optionType": "FUT",
+          "side": "SELL",
+          "quantity": 200,
+          "entryPrice": 2160.92,
+          "exitPrice": 2107.1,
+          "pnl": 10764,
+          "pnlPct": 2.49,
+          "entryTime": "2026-05-12T06:42:04.099Z",
+          "exitTime": "2026-05-12T09:42:26.678Z"
+        },
+        {
+          "id": "f72ad5d5-b14d-4de6-b399-d22eee8f98fe",
+          "symbol": "ICICIPRULI",
+          "expiry": "2026-05-28",
+          "strike": 0,
+          "optionType": "FUT",
+          "side": "SELL",
+          "quantity": 1500,
+          "entryPrice": 555.92,
+          "exitPrice": 541.85,
+          "pnl": 21105,
+          "pnlPct": 2.53,
+          "entryTime": "2026-05-12T06:41:53.447Z",
+          "exitTime": "2026-05-12T09:34:49.535Z"
+        }
+      ]
+    };
+  }
+
+  if (item.name.toLowerCase().includes('salesforce') || item.connector.toLowerCase().includes('salesforce')) {
+    return {
+      s3Path: 's3://fluxo-ingest-bucket/salesforce-sync/',
+      fileSize: '1.2 MB',
+      fields: [
+        { name: 'ContactId', type: 'VARCHAR', isPk: true, isNullable: false, length: '18', desc: 'Salesforce unique identifier' },
+        { name: 'FirstName', type: 'VARCHAR', isPk: false, isNullable: true, length: '40', desc: 'First name of contact' },
+        { name: 'LastName', type: 'VARCHAR', isPk: false, isNullable: false, length: '80', desc: 'Last name of contact' },
+        { name: 'Email', type: 'VARCHAR', isPk: false, isNullable: false, length: '120', desc: 'Email address' },
+        { name: 'Phone', type: 'VARCHAR', isPk: false, isNullable: true, length: '40', desc: 'Primary phone number' },
+      ],
+      sampleData: [
+        { ContactId: '0038W00001yZabcQAD', FirstName: 'John', LastName: 'Doe', Email: 'john.doe@salesforce.com', Phone: '555-0199' },
+        { ContactId: '0038W00001yZxyzQAD', FirstName: 'Jane', LastName: 'Smith', Email: 'jane.smith@acme.com', Phone: '555-0144' },
+      ]
+    };
+  }
+
+  if (item.name.toLowerCase().includes('sap') || item.connector.toLowerCase().includes('sap')) {
+    return {
+      s3Path: 's3://fluxo-ingest-bucket/sap-invoices/',
+      fileSize: '4.8 MB',
+      fields: [
+        { name: 'InvoiceNum', type: 'VARCHAR', isPk: true, isNullable: false, length: '10', desc: 'SAP Billing document number' },
+        { name: 'CompanyCode', type: 'VARCHAR', isPk: false, isNullable: false, length: '4', desc: 'SAP Company organization code' },
+        { name: 'PostingDate', type: 'DATE', isPk: false, isNullable: false, length: '-', desc: 'Posting date' },
+        { name: 'Amount', type: 'DECIMAL', isPk: false, isNullable: false, length: '15,2', desc: 'Net invoice amount in EUR' },
+      ],
+      sampleData: [
+        { InvoiceNum: '9000123456', CompanyCode: '1000', PostingDate: '2026-07-14', Amount: '12450.00' },
+        { InvoiceNum: '9000123457', CompanyCode: '1000', PostingDate: '2026-07-14', Amount: '8920.50' },
+      ]
+    };
+  }
+
+  if (item.name.toLowerCase().includes('csv') || item.connector.toLowerCase().includes('file') || item.type === 'FILE_SYSTEM') {
+    return {
+      s3Path: 's3://fluxo-ingest-bucket/uploads/',
+      fileSize: item.records === '0' ? '0 bytes' : '154 KB',
+      fields: [
+        { name: 'id', type: 'INTEGER', isPk: true, isNullable: false, length: '11', desc: 'Record index key' },
+        { name: 'product_sku', type: 'VARCHAR', isPk: false, isNullable: false, length: '30', desc: 'Product inventory stock keeping unit' },
+        { name: 'price', type: 'FLOAT', isPk: false, isNullable: false, length: '-', desc: 'Current sale price' },
+        { name: 'quantity', type: 'INTEGER', isPk: false, isNullable: false, length: '6', desc: 'Remaining stock quantity' },
+      ],
+      sampleData: [
+        { id: '1', product_sku: 'PROD-SKU-001', price: '49.99', quantity: '120' },
+        { id: '2', product_sku: 'PROD-SKU-002', price: '29.50', quantity: '85' },
+      ]
+    };
+  }
+
+  return defaults;
+};
+
 const InterfacePage: React.FC = () => {
   const [tab, setTab] = useState(0);
   const [search, setSearch] = useState('');
@@ -187,6 +315,317 @@ const InterfacePage: React.FC = () => {
   const [isLive, setIsLive] = useState(false);
   const [inputs, setInputs] = useState<any[]>([]);
   const [outputs, setOutputs] = useState<any[]>([]);
+
+  // Selected Interface details state
+  const [selectedDetailItem, setSelectedDetailItem] = useState<any | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  // Registered connectors loaded from local storage
+  const [registeredConnectors, setRegisteredConnectors] = useState<any[]>([]);
+
+  // Primary Key mapping configurations
+  const [selectedPKs, setSelectedPKs] = useState<Record<string, string>>({});
+
+  // Menu tracking states for actions
+  const [selectedMenuId, setSelectedMenuId] = useState<string | null>(null);
+  const [selectedMenuName, setSelectedMenuName] = useState<string | null>(null);
+
+  // Schedule dialog states
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [selectedSchedule, setSelectedSchedule] = useState('Hourly');
+
+  // Duplicate custom name dialog states
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [duplicateName, setDuplicateName] = useState('');
+
+  // Edit/Rename existing interface dialog states
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+
+  // Output export configurations
+  const [selectedInputIds, setSelectedInputIds] = useState<string[]>([]);
+  const [sqlQuery, setSqlQuery] = useState('');
+  const [exportFormat, setExportFormat] = useState('JSON');
+
+  const formatNextRunDate = (schedule: string, triggerType: string) => {
+    if (triggerType !== 'SCHEDULED') return '-';
+    const now = new Date();
+    if (schedule === 'Hourly') {
+      now.setHours(now.getHours() + 1);
+      now.setMinutes(0);
+    } else if (schedule === 'Daily') {
+      now.setDate(now.getDate() + 1);
+      now.setHours(9);
+      now.setMinutes(0);
+    } else if (schedule === 'Weekly') {
+      now.setDate(now.getDate() + 7);
+      now.setHours(9);
+      now.setMinutes(0);
+    } else if (schedule === 'Monthly') {
+      now.setMonth(now.getMonth() + 1);
+      now.setDate(1);
+      now.setHours(9);
+      now.setMinutes(0);
+    } else {
+      now.setHours(now.getHours() + 1);
+    }
+    
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const MM = String(now.getMinutes()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd} ${hh}:${MM}`;
+  };
+
+  const handleSelectPrimaryKey = (interfaceId: string, fieldName: string) => {
+    setSelectedPKs(prev => ({ ...prev, [interfaceId]: fieldName }));
+    setSnackbarMessage(`Primary key configured to "${fieldName}"`);
+    setSnackbarSeverity('success');
+    setSnackbarOpen(true);
+  };
+
+  const handleDeleteInterface = () => {
+    if (selectedMenuId) {
+      const localData = JSON.parse(localStorage.getItem('df_interfaces') || '[]');
+      const updated = localData.filter((i: any) => i.id !== selectedMenuId);
+      localStorage.setItem('df_interfaces', JSON.stringify(updated));
+
+      setInputs(prev => prev.filter((i) => i.id !== selectedMenuId));
+      setOutputs(prev => prev.filter((i) => i.id !== selectedMenuId));
+
+      setSnackbarMessage(`Interface "${selectedMenuName}" deleted successfully.`);
+      setSnackbarSeverity('info');
+      setSnackbarOpen(true);
+    }
+    setMenuAnchor(null);
+    setSelectedMenuId(null);
+    setSelectedMenuName(null);
+  };
+
+  const handleDuplicateInterface = () => {
+    if (selectedMenuId) {
+      const localData = JSON.parse(localStorage.getItem('df_interfaces') || '[]');
+      const original = localData.find((i: any) => i.id === selectedMenuId) || inputs.find(i => i.id === selectedMenuId) || outputs.find(i => i.id === selectedMenuId);
+      if (original) {
+        const typePrefix = original.id.split('-')[0] || 'INT';
+        const newId = `${typePrefix}-${Math.floor(100 + Math.random() * 900)}`;
+        const duplicated = {
+          ...original,
+          id: newId,
+          name: duplicateName.trim() || `Copy of ${original.name}`,
+          lastRun: 'Never',
+          records: '0',
+        };
+        const updated = [duplicated, ...localData];
+        localStorage.setItem('df_interfaces', JSON.stringify(updated));
+
+        // Determine list tab insertion
+        const isInput = ['REST_API', 'FILE_SYSTEM', 'CLOUD_STORAGE'].includes(duplicated.type) || tab === 0;
+        if (isInput) {
+          setInputs([duplicated, ...inputs]);
+        } else {
+          setOutputs([duplicated, ...outputs]);
+        }
+
+        setSnackbarMessage(`Duplicated interface to "${duplicated.name}"`);
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+      }
+    }
+    setDuplicateDialogOpen(false);
+    setSelectedMenuId(null);
+    setSelectedMenuName(null);
+  };
+
+  const handleSaveSchedule = () => {
+    if (selectedMenuId) {
+      const localData = JSON.parse(localStorage.getItem('df_interfaces') || '[]');
+      const updated = localData.map((item: any) =>
+        item.id === selectedMenuId
+          ? { ...item, triggerType: 'SCHEDULED', schedule: selectedSchedule }
+          : item
+      );
+      localStorage.setItem('df_interfaces', JSON.stringify(updated));
+
+      const updateItemSchedule = (list: any[]) =>
+        list.map((item) => (item.id === selectedMenuId ? { ...item, triggerType: 'SCHEDULED', schedule: selectedSchedule } : item));
+      setInputs(prev => updateItemSchedule(prev));
+      setOutputs(prev => updateItemSchedule(prev));
+
+      setSnackbarMessage(`Configured schedule for "${selectedMenuName}" to ${selectedSchedule}.`);
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+    }
+    setScheduleDialogOpen(false);
+    setSelectedMenuId(null);
+    setSelectedMenuName(null);
+  };
+
+  const handleUpdateInterface = () => {
+    if (selectedMenuId) {
+      const localData = JSON.parse(localStorage.getItem('df_interfaces') || '[]');
+      const updated = localData.map((item: any) =>
+        item.id === selectedMenuId
+          ? { ...item, name: editName, schemaConfig: { ...item.schemaConfig, description: editDesc } }
+          : item
+      );
+      localStorage.setItem('df_interfaces', JSON.stringify(updated));
+
+      const updateStateList = (list: any[]) =>
+        list.map((item) => (item.id === selectedMenuId ? { ...item, name: editName, schemaConfig: { ...item.schemaConfig, description: editDesc } } : item));
+      setInputs(prev => updateStateList(prev));
+      setOutputs(prev => updateStateList(prev));
+
+      setSnackbarMessage(`Interface renamed to "${editName}"`);
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+    }
+    setEditDialogOpen(false);
+    setSelectedMenuId(null);
+  };
+
+  // Execution states for Run button spinner & Download button visibility
+  const [runningId, setRunningId] = useState<string | null>(null);
+  const [justExecutedIds, setJustExecutedIds] = useState<Record<string, boolean>>({});
+
+  // Dynamic live connector data states
+  const [liveSchemaFields, setLiveSchemaFields] = useState<any[] | null>(null);
+  const [liveSampleData, setLiveSampleData] = useState<any[] | null>(null);
+  const [liveFullData, setLiveFullData] = useState<any[] | null>(null);
+
+  React.useEffect(() => {
+    if (!selectedDetailItem) {
+      setLiveSchemaFields(null);
+      setLiveSampleData(null);
+      setLiveFullData(null);
+      return;
+    }
+
+    const isOutput = selectedDetailItem.id.startsWith('OUT-') || !['REST_API', 'FILE_SYSTEM', 'CLOUD_STORAGE'].includes(selectedDetailItem.type);
+
+    if (isOutput) {
+      // Compile combined/merged data from selected input interfaces!
+      let combinedData: any[] = [];
+      const selectedInputs = selectedDetailItem.selectedInputs || [];
+
+      if (selectedInputs.length > 0) {
+        for (const inputId of selectedInputs) {
+          const inpItem = inputs.find(i => i.id === inputId);
+          if (inpItem) {
+            const details = getInterfaceDetails(inpItem);
+            combinedData = [
+              ...combinedData,
+              ...details.sampleData.map((row: any) => ({ ...row, source_input_name: inpItem.name }))
+            ];
+          }
+        }
+      }
+
+      if (combinedData.length === 0) {
+        // Fallback default mock output if no inputs selected
+        combinedData = [
+          { txn_id: 'TXN-001', department: 'Sales', volume: 1450, code: 'SALES_DEPT', processed_at: new Date().toLocaleDateString() },
+          { txn_id: 'TXN-002', department: 'Finance', volume: 9800, code: 'FINANCE_DEPT', processed_at: new Date().toLocaleDateString() },
+          { txn_id: 'TXN-003', department: 'IT Ops', volume: 24500, code: 'IT_OPS', processed_at: new Date().toLocaleDateString() },
+        ];
+      }
+
+      const firstRecord = combinedData[0] || {};
+      const generatedFields = Object.keys(firstRecord).map((key, idx) => ({
+        name: key,
+        type: typeof firstRecord[key] === 'number' ? 'INTEGER' : 'VARCHAR',
+        isPk: idx === 0,
+        isNullable: true,
+        length: '-',
+        desc: `Pipeline compiled data field`
+      }));
+
+      setLiveSampleData(combinedData.slice(0, 10));
+      setLiveFullData(combinedData);
+      setLiveSchemaFields(generatedFields);
+      return;
+    }
+
+    const localConns = JSON.parse(localStorage.getItem('df_connectors') || '[]');
+    const connectorObj = localConns.find((c: any) => c.name === selectedDetailItem.connector);
+    let url = connectorObj?.hostUrl || '';
+
+    // Auto-detect Beeceptor or mock-todos URLs inside interface name/connector configurations
+    if (!url && selectedDetailItem.name.toLowerCase().includes('api') && selectedDetailItem.connector.toLowerCase().includes('api')) {
+      url = 'https://dummy-json.mock.beeceptor.com/todos';
+    }
+
+    if (url && url.startsWith('http')) {
+      fetch(url)
+        .then((res) => res.json())
+        .then((data) => {
+          const dataArray = Array.isArray(data) ? data : (data.todos || data.data || [data]);
+          const sample = dataArray.slice(0, 10); // Take up to 10 rows for display preview
+          const firstRecord = dataArray[0] || {};
+          const generatedFields = Object.keys(firstRecord).map((key, idx) => ({
+            name: key,
+            type: typeof firstRecord[key] === 'number' ? 'INTEGER' : typeof firstRecord[key] === 'boolean' ? 'BOOLEAN' : 'VARCHAR',
+            isPk: key.toLowerCase() === 'id' || idx === 0,
+            isNullable: true,
+            length: typeof firstRecord[key] === 'number' ? '-' : '255',
+            desc: `Live field ingested from remote API node`
+          }));
+          setLiveSampleData(sample);
+          setLiveFullData(dataArray); // Save the entire list (e.g. all 20 records) for the file download!
+          setLiveSchemaFields(generatedFields);
+        })
+        .catch((err) => {
+          console.warn('Failed to fetch from live connector URL:', err);
+          setLiveSchemaFields(null);
+          setLiveSampleData(null);
+          setLiveFullData(null);
+        });
+    }
+  }, [selectedDetailItem]);
+
+  const handleDownloadIngestedData = (item: any) => {
+    const dataToDownload = liveFullData || getInterfaceDetails(item).sampleData;
+    const format = item.exportFormat || 'JSON';
+    
+    let blob: Blob;
+    let filename: string;
+
+    if (format === 'CSV') {
+      const headers = Object.keys(dataToDownload[0] || {});
+      const csvRows = [
+        headers.join(','),
+        ...dataToDownload.map(row => headers.map(fieldName => JSON.stringify(row[fieldName] || '')).join(','))
+      ];
+      blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      filename = `${item.name.toLowerCase().replace(/\s+/g, '-')}-data.csv`;
+    } else if (format === 'TXT') {
+      const headers = Object.keys(dataToDownload[0] || {});
+      const txtRows = [
+        headers.join('\t'),
+        ...dataToDownload.map(row => headers.map(fieldName => String(row[fieldName] || '')).join('\t'))
+      ];
+      blob = new Blob([txtRows.join('\n')], { type: 'text/plain;charset=utf-8;' });
+      filename = `${item.name.toLowerCase().replace(/\s+/g, '-')}-data.txt`;
+    } else {
+      blob = new Blob([JSON.stringify(dataToDownload, null, 2)], { type: 'application/json' });
+      filename = `${item.name.toLowerCase().replace(/\s+/g, '-')}-data.json`;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    setSnackbarMessage(`Downloaded ${item.name} processed data as ${format} (${dataToDownload.length} records).`);
+    setSnackbarSeverity('success');
+    setSnackbarOpen(true);
+  };
 
   // Form Fields States
   const [name, setName] = useState('');
@@ -250,16 +689,32 @@ const InterfacePage: React.FC = () => {
         throw new Error('API failed');
       }
     } catch (err) {
-      console.warn('Interface Service API offline. Falling back to empty session data.');
-      setInputs([]);
-      setOutputs([]);
+      console.warn('Interface Service API offline. Falling back to local storage session data.');
+      const localData = JSON.parse(localStorage.getItem('df_interfaces') || '[]');
+      const localInputs = localData.filter((item: any) =>
+        ['REST_API', 'FILE_SYSTEM', 'CLOUD_STORAGE'].includes(item.type)
+      );
+      const localOutputs = localData.filter((item: any) =>
+        !['REST_API', 'FILE_SYSTEM', 'CLOUD_STORAGE'].includes(item.type)
+      );
+      setInputs(localInputs);
+      setOutputs(localOutputs);
       setIsLive(false);
     }
   };
 
   React.useEffect(() => {
     fetchInterfaces();
+    const localConnectors = JSON.parse(localStorage.getItem('df_connectors') || '[]');
+    setRegisteredConnectors(localConnectors);
   }, []);
+
+  React.useEffect(() => {
+    if (createOpen) {
+      const localConnectors = JSON.parse(localStorage.getItem('df_connectors') || '[]');
+      setRegisteredConnectors(localConnectors);
+    }
+  }, [createOpen]);
 
   const data = tab === 0 ? inputs : outputs;
   const filtered = data.filter(
@@ -313,13 +768,28 @@ const InterfacePage: React.FC = () => {
       return;
     }
 
+    const isOutputTab = tab === 1;
+    const finalType = isOutputTab 
+      ? (sourceType || 'INPUT_INTERFACES') 
+      : (sourceType || 'REST_API');
+
+    const finalConnector = isOutputTab 
+      ? (sourceType === 'QUERY_BUILDER' ? 'SQL Query Engine' : 'Input Aggregator')
+      : (connector || 'REST API');
+
     const payload = {
       name,
-      type: sourceType || (tab === 0 ? 'REST_API' : 'DATABASE'),
-      connectorId: connector || (tab === 0 ? 'REST API' : 'Snowflake'),
+      type: finalType,
+      connectorId: finalConnector,
       triggerType: triggerType || 'MANUAL',
       scheduleConfig: {},
-      schemaConfig: { description },
+      schemaConfig: { 
+        description,
+        // Save export-specific metadata fields
+        sqlQuery: isOutputTab ? sqlQuery : undefined,
+        selectedInputs: isOutputTab ? selectedInputIds : undefined,
+        exportFormat: isOutputTab ? exportFormat : undefined
+      },
     };
 
     try {
@@ -343,7 +813,7 @@ const InterfacePage: React.FC = () => {
         throw new Error('API creation failed');
       }
     } catch (err) {
-      // 2. Local Fallback simulation
+      // 2. Local Fallback simulation with localStorage persistence
       console.warn('API Offline. Simulating creation locally.');
       const newId = `${tab === 0 ? 'INT' : 'OUT'}-${String(Math.floor(100 + Math.random() * 900))}`;
       const newItem = {
@@ -355,9 +825,18 @@ const InterfacePage: React.FC = () => {
         triggerType: payload.triggerType,
         schedule: triggerType === 'SCHEDULED' ? 'Hourly' : 'Manual',
         lastRun: 'Never',
-        records: uploadedFile ? '1,024' : '0',
+        records: '0',
         icon: tab === 0 ? (sourceType === 'FILE_SYSTEM' ? '📄' : '☁️') : '🏢',
+        // Persist configs
+        selectedInputs: payload.schemaConfig.selectedInputs,
+        sqlQuery: payload.schemaConfig.sqlQuery,
+        exportFormat: payload.schemaConfig.exportFormat,
+        schemaConfig: { description }
       };
+
+      const localData = JSON.parse(localStorage.getItem('df_interfaces') || '[]');
+      const updated = [newItem, ...localData];
+      localStorage.setItem('df_interfaces', JSON.stringify(updated));
 
       if (tab === 0) {
         setInputs([newItem, ...inputs]);
@@ -365,7 +844,7 @@ const InterfacePage: React.FC = () => {
         setOutputs([newItem, ...outputs]);
       }
 
-      setSnackbarMessage(`Interface "${name}" created (Simulated Local Session).`);
+      setSnackbarMessage(`Interface "${name}" created (Simulated Session Saved).`);
       setSnackbarSeverity('info');
       setSnackbarOpen(true);
     }
@@ -379,13 +858,97 @@ const InterfacePage: React.FC = () => {
     setTriggerType('');
     setDescription('');
     setUploadedFile(null);
+    setSelectedInputIds([]);
+    setSqlQuery('');
+    setExportFormat('JSON');
   };
 
-  const handleRunInterface = (id: string, name: string) => {
-    // Simulating running interface
+  const handleRunInterface = async (id: string, name: string) => {
+    // Set executing state for spinner
+    setRunningId(id);
+
+    // 1. Show toast feedback
     setSnackbarMessage(`Job execution started for "${name}" (${id})`);
     setSnackbarSeverity('info');
     setSnackbarOpen(true);
+
+    let recordCount = 12; // default fallback
+
+    try {
+      // Find the interface details to check connector configuration
+      const localInterfaces = JSON.parse(localStorage.getItem('df_interfaces') || '[]');
+      const item = localInterfaces.find((i: any) => i.id === id) || inputs.find(i => i.id === id) || outputs.find(i => i.id === id);
+
+      if (item) {
+        // Find the connector linked to this interface
+        const localConns = JSON.parse(localStorage.getItem('df_connectors') || '[]');
+        const connectorObj = localConns.find((c: any) => c.name === item.connector);
+        let url = connectorObj?.hostUrl || '';
+
+        // Auto-detect Beeceptor endpoints if connector type lacks a custom hostUrl
+        if (!url && item.name.toLowerCase().includes('api') && item.connector.toLowerCase().includes('api')) {
+          url = 'https://dummy-json.mock.beeceptor.com/todos';
+        }
+
+        if (url && url.startsWith('http')) {
+          const res = await fetch(url);
+          const data = await res.json();
+          const dataArray = Array.isArray(data) ? data : (data.todos || data.data || [data]);
+          recordCount = dataArray.length;
+        } else if (item.name.toLowerCase().includes('trade') || item.name.toLowerCase().includes('history')) {
+          recordCount = 20; // Exact count for trade history json file
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch dynamic record count during run, falling back:', err);
+    }
+
+    setTimeout(() => {
+      // 2. Write a real-time completed job run to localStorage so it displays in Job History
+      const newJob = {
+        id: `JOB-${Math.floor(1000 + Math.random() * 9000)}`,
+        interface: name,
+        workflow: 'Ad-hoc Ingestion Pipeline',
+        status: 'COMPLETED',
+        trigger: 'MANUAL',
+        recordsProcessed: recordCount,
+        recordsFailed: 0,
+        duration: `${(2 + Math.random() * 5).toFixed(1)}s`,
+        startedAt: new Date().toLocaleString(),
+        completedAt: new Date().toLocaleString(),
+      };
+
+      const localJobs = JSON.parse(localStorage.getItem('df_jobs') || '[]');
+      localStorage.setItem('df_jobs', JSON.stringify([newJob, ...localJobs]));
+
+      // 3. Mark as just executed during this session
+      setJustExecutedIds(prev => ({ ...prev, [id]: true }));
+      setRunningId(null);
+
+      // 4. Update the interfaces list 'lastRun' field and 'records' count in state and localStorage
+      const runTime = new Date();
+      const yyyy = runTime.getFullYear();
+      const mm = String(runTime.getMonth() + 1).padStart(2, '0');
+      const dd = String(runTime.getDate()).padStart(2, '0');
+      const hh = String(runTime.getHours()).padStart(2, '0');
+      const MM = String(runTime.getMinutes()).padStart(2, '0');
+      const exactTimestamp = `${yyyy}-${mm}-${dd} ${hh}:${MM}`;
+
+      const updateInterfaceRecords = (list: any[]) =>
+        list.map((item) => (item.id === id ? { ...item, lastRun: exactTimestamp, records: String(recordCount) } : item));
+      setInputs(prev => updateInterfaceRecords(prev));
+      setOutputs(prev => updateInterfaceRecords(prev));
+
+      const localInterfaces = JSON.parse(localStorage.getItem('df_interfaces') || '[]');
+      const updatedInterfaces = localInterfaces.map((item: any) =>
+        item.id === id ? { ...item, lastRun: exactTimestamp, records: String(recordCount) } : item
+      );
+      localStorage.setItem('df_interfaces', JSON.stringify(updatedInterfaces));
+
+      setSnackbarMessage(`Pipeline execution completed for "${name}"!`);
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+    }, 1500);
   };
 
   return (
@@ -491,6 +1054,7 @@ const InterfacePage: React.FC = () => {
                   <TableCell>Status</TableCell>
                   <TableCell>Trigger</TableCell>
                   <TableCell>Last Run</TableCell>
+                  <TableCell>Next Scheduled Job</TableCell>
                   <TableCell>Records</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
@@ -498,7 +1062,7 @@ const InterfacePage: React.FC = () => {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                    <TableCell colSpan={9} align="center" sx={{ py: 3, color: 'text.secondary' }}>
                       No interfaces found matching your search.
                     </TableCell>
                   </TableRow>
@@ -507,6 +1071,10 @@ const InterfacePage: React.FC = () => {
                     <TableRow
                       key={item.id}
                       hover
+                      onClick={() => {
+                        setSelectedDetailItem(item);
+                        setDetailOpen(true);
+                      }}
                       sx={{ cursor: 'pointer', '&:last-child td': { borderBottom: 0 } }}
                     >
                       <TableCell>
@@ -570,6 +1138,11 @@ const InterfacePage: React.FC = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
+                        <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 500 }}>
+                          {formatNextRunDate(item.schedule, item.triggerType)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
                           {item.records}
                         </Typography>
@@ -589,20 +1162,38 @@ const InterfacePage: React.FC = () => {
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="View">
-                            <IconButton size="small">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDetailItem(item);
+                                setDetailOpen(true);
+                              }}
+                            >
                               <VisibilityOutlined fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Edit">
-                            <IconButton size="small">
-                              <EditOutlined fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                           <Tooltip title="Edit">
+                             <IconButton
+                               size="small"
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 setSelectedMenuId(item.id);
+                                 setEditName(item.name);
+                                 setEditDesc(item.schemaConfig?.description || '');
+                                 setEditDialogOpen(true);
+                               }}
+                             >
+                               <EditOutlined fontSize="small" />
+                             </IconButton>
+                           </Tooltip>
                           <Tooltip title="More">
                             <IconButton
                               size="small"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                setSelectedMenuId(item.id);
+                                setSelectedMenuName(item.name);
                                 setMenuAnchor(e.currentTarget);
                               }}
                             >
@@ -624,19 +1215,156 @@ const InterfacePage: React.FC = () => {
       <Menu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
-        onClose={() => setMenuAnchor(null)}
+        onClose={() => {
+          setMenuAnchor(null);
+          setSelectedMenuId(null);
+          setSelectedMenuName(null);
+        }}
         slotProps={{ paper: { sx: { width: 180, borderRadius: '12px' } } }}
       >
-        <MenuItem onClick={() => setMenuAnchor(null)}>
+        <MenuItem onClick={() => {
+          setDuplicateName(selectedMenuName ? `Copy of ${selectedMenuName}` : '');
+          setMenuAnchor(null);
+          setDuplicateDialogOpen(true);
+        }}>
           <ContentCopyOutlined sx={{ mr: 1.5, fontSize: 18 }} /> Duplicate
         </MenuItem>
-        <MenuItem onClick={() => setMenuAnchor(null)}>
+        <MenuItem onClick={() => { setMenuAnchor(null); setScheduleDialogOpen(true); }}>
           <ScheduleOutlined sx={{ mr: 1.5, fontSize: 18 }} /> Schedule
         </MenuItem>
-        <MenuItem onClick={() => setMenuAnchor(null)} sx={{ color: 'error.main' }}>
+        <MenuItem onClick={handleDeleteInterface} sx={{ color: 'error.main' }}>
           <DeleteOutlined sx={{ mr: 1.5, fontSize: 18 }} /> Delete
         </MenuItem>
       </Menu>
+      {/* Edit Interface Dialog */}
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => {
+          setEditDialogOpen(false);
+          setSelectedMenuId(null);
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          Edit Interface Details
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              fullWidth
+              label="Interface Name"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="Rename your interface"
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              value={editDesc}
+              onChange={(e) => setEditDesc(e.target.value)}
+              placeholder="Edit description"
+              multiline
+              rows={2}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button variant="outlined" onClick={() => {
+            setEditDialogOpen(false);
+            setSelectedMenuId(null);
+          }}>
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={handleUpdateInterface}>
+            Save Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Duplicate Interface Dialog */}
+      <Dialog
+        open={duplicateDialogOpen}
+        onClose={() => {
+          setDuplicateDialogOpen(false);
+          setSelectedMenuId(null);
+          setSelectedMenuName(null);
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          Duplicate Interface
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Box sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Interface Name"
+              value={duplicateName}
+              onChange={(e) => setDuplicateName(e.target.value)}
+              placeholder="e.g. Copy of Interface"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button variant="outlined" onClick={() => {
+            setDuplicateDialogOpen(false);
+            setSelectedMenuId(null);
+            setSelectedMenuName(null);
+          }}>
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={handleDuplicateInterface}>
+            Duplicate
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Schedule Interface Dialog */}
+      <Dialog
+        open={scheduleDialogOpen}
+        onClose={() => {
+          setScheduleDialogOpen(false);
+          setSelectedMenuId(null);
+          setSelectedMenuName(null);
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          Schedule Interface: {selectedMenuName}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Box sx={{ mt: 1 }}>
+            <FormControl fullWidth>
+              <InputLabel>Schedule Interval</InputLabel>
+              <Select
+                label="Schedule Interval"
+                value={selectedSchedule}
+                onChange={(e) => setSelectedSchedule(e.target.value)}
+              >
+                <MenuItem value="Hourly">Hourly</MenuItem>
+                <MenuItem value="Daily">Daily</MenuItem>
+                <MenuItem value="Weekly">Weekly</MenuItem>
+                <MenuItem value="Monthly">Monthly</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button variant="outlined" onClick={() => {
+            setScheduleDialogOpen(false);
+            setSelectedMenuId(null);
+            setSelectedMenuName(null);
+          }}>
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={handleSaveSchedule}>
+            Save Schedule
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Create Interface Dialog */}
       <Dialog
@@ -654,44 +1382,153 @@ const InterfacePage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Interface Name"
-                placeholder="e.g., Salesforce Contact Sync"
+                placeholder={tab === 0 ? "e.g., Salesforce Contact Sync" : "e.g., Finance Reconciliation Export"}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
             </Grid>
-            <Grid size={6}>
-              <FormControl fullWidth>
-                <InputLabel>Source Type</InputLabel>
-                <Select
-                  label="Source Type"
-                  value={sourceType}
-                  onChange={(e) => setSourceType(e.target.value)}
-                >
-                  <MenuItem value="REST_API">REST API</MenuItem>
-                  <MenuItem value="DATABASE">Database</MenuItem>
-                  <MenuItem value="FILE_SYSTEM">File Upload</MenuItem>
-                  <MenuItem value="CLOUD_STORAGE">Cloud Storage</MenuItem>
-                  <MenuItem value="ENTERPRISE_APP">Enterprise App</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={6}>
-              <FormControl fullWidth>
-                <InputLabel>Connector</InputLabel>
-                <Select
-                  label="Connector"
-                  value={connector}
-                  onChange={(e) => setConnector(e.target.value)}
-                >
-                  <MenuItem value="Salesforce">Salesforce</MenuItem>
-                  <MenuItem value="SAP">SAP</MenuItem>
-                  <MenuItem value="PostgreSQL">PostgreSQL</MenuItem>
-                  <MenuItem value="AWS S3">AWS S3</MenuItem>
-                  <MenuItem value="REST API">REST API</MenuItem>
-                  <MenuItem value="Local File">Local File</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+
+            {tab === 0 ? (
+              <>
+                <Grid size={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Source Type</InputLabel>
+                    <Select
+                      label="Source Type"
+                      value={sourceType}
+                      onChange={(e) => setSourceType(e.target.value)}
+                    >
+                      <MenuItem value="REST_API">REST API</MenuItem>
+                      <MenuItem value="DATABASE">Database</MenuItem>
+                      <MenuItem value="FILE_SYSTEM">File Upload</MenuItem>
+                      <MenuItem value="CLOUD_STORAGE">Cloud Storage</MenuItem>
+                      <MenuItem value="ENTERPRISE_APP">Enterprise App</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Connector</InputLabel>
+                    <Select
+                      label="Connector"
+                      value={connector}
+                      onChange={(e) => setConnector(e.target.value)}
+                    >
+                      {(() => {
+                        const filteredConns = registeredConnectors.filter((c) => {
+                          if (sourceType === 'REST_API') return c.type === 'REST_API' || c.type === 'ENTERPRISE_APP';
+                          if (sourceType === 'DATABASE') return c.type === 'DATABASE';
+                          if (sourceType === 'CLOUD_STORAGE') return c.type === 'CLOUD_STORAGE';
+                          if (sourceType === 'FILE_SYSTEM') return c.type === 'FILE_SYSTEM';
+                          return true;
+                        });
+                        if (filteredConns.length === 0) {
+                          if (sourceType === 'REST_API') {
+                            return [
+                              <MenuItem key="rest-api" value="REST API">Default REST API</MenuItem>,
+                              <MenuItem key="sf" value="Salesforce">Salesforce</MenuItem>,
+                              <MenuItem key="sap" value="SAP">SAP</MenuItem>
+                            ];
+                          }
+                          if (sourceType === 'DATABASE') {
+                            return <MenuItem key="pg" value="PostgreSQL">Default PostgreSQL</MenuItem>;
+                          }
+                          if (sourceType === 'CLOUD_STORAGE') {
+                            return <MenuItem key="s3" value="AWS S3">Default AWS S3</MenuItem>;
+                          }
+                          if (sourceType === 'FILE_SYSTEM') {
+                            return <MenuItem key="local" value="Local File">Local File Storage</MenuItem>;
+                          }
+                          return <MenuItem key="gen" value="General Connector">General Connector</MenuItem>;
+                        }
+                        return filteredConns.map((c) => (
+                          <MenuItem key={c.id} value={c.name}>{c.name}</MenuItem>
+                        ));
+                      })()}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </>
+            ) : (
+              <>
+                <Grid size={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Source Mode</InputLabel>
+                    <Select
+                      label="Source Mode"
+                      value={sourceType || 'INPUT_INTERFACES'}
+                      onChange={(e) => {
+                        setSourceType(e.target.value);
+                        if (e.target.value === 'QUERY_BUILDER') {
+                          setSelectedInputIds([]);
+                        } else {
+                          setSqlQuery('');
+                        }
+                      }}
+                    >
+                      <MenuItem value="INPUT_INTERFACES">Input Interface Sources</MenuItem>
+                      <MenuItem value="QUERY_BUILDER">SQL Query Builder</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Export Format</InputLabel>
+                    <Select
+                      label="Export Format"
+                      value={exportFormat}
+                      onChange={(e) => setExportFormat(e.target.value)}
+                    >
+                      <MenuItem value="JSON">JSON (.json)</MenuItem>
+                      <MenuItem value="CSV">CSV (.csv)</MenuItem>
+                      <MenuItem value="TXT">Text (.txt)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {sourceType === 'QUERY_BUILDER' ? (
+                  <Grid size={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={4}
+                      label="SQL Custom Query Builder"
+                      placeholder="SELECT * FROM trade_history JOIN api_data ON trade_history.id = api_data.id"
+                      value={sqlQuery}
+                      onChange={(e) => setSqlQuery(e.target.value)}
+                    />
+                  </Grid>
+                ) : (
+                  <Grid size={12}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.85rem' }}>
+                      Select Input Interfaces to Aggregate / Process:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 150, overflowY: 'auto', p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: '12px' }}>
+                      {inputs.map((inp) => (
+                        <FormControlLabel
+                          key={inp.id}
+                          control={
+                            <Checkbox
+                              checked={selectedInputIds.includes(inp.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedInputIds([...selectedInputIds, inp.id]);
+                                } else {
+                                  setSelectedInputIds(selectedInputIds.filter(id => id !== inp.id));
+                                }
+                              }}
+                            />
+                          }
+                          label={`${inp.name} (${inp.id})`}
+                          sx={{ '& .MuiTypography-root': { fontSize: '0.8rem' } }}
+                        />
+                      ))}
+                    </Box>
+                  </Grid>
+                )}
+              </>
+            )}
+
             <Grid size={6}>
               <FormControl fullWidth>
                 <InputLabel>Trigger Type</InputLabel>
@@ -718,7 +1555,7 @@ const InterfacePage: React.FC = () => {
             </Grid>
 
             {/* File Upload Area */}
-            {tab === 0 && (
+            {tab === 0 && sourceType === 'FILE_SYSTEM' && (
               <Grid size={12}>
                 <Box
                   onClick={handleFileClick}
@@ -770,6 +1607,252 @@ const InterfacePage: React.FC = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
+
+      {/* Interface Detail Drawer */}
+      <Drawer
+        anchor="right"
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        PaperProps={{
+          sx: {
+            width: 620,
+            maxWidth: '100vw',
+            bgcolor: 'background.paper',
+            backgroundImage: 'none',
+            borderLeft: '1px solid',
+            borderColor: 'divider',
+            p: 4,
+            boxShadow: `-12px 0 40px ${alpha('#000', 0.5)}`,
+            overflowX: 'hidden',
+          },
+        }}
+      >
+        {selectedDetailItem && (() => {
+          const details = getInterfaceDetails(selectedDetailItem);
+          const activeFields = liveSchemaFields || details.fields;
+          const activeSample = liveSampleData || details.sampleData;
+          const isOutput = selectedDetailItem.id.startsWith('OUT-') || !['REST_API', 'FILE_SYSTEM', 'CLOUD_STORAGE'].includes(selectedDetailItem.type);
+          return (
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', overflowX: 'hidden' }}>
+              {/* Header */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+                <Box>
+                  <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                    {selectedDetailItem.name}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
+                    ID: {selectedDetailItem.id}
+                  </Typography>
+                </Box>
+                <Chip
+                  label={selectedDetailItem.status}
+                  size="small"
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: '0.7rem',
+                    bgcolor: alpha(statusColors[selectedDetailItem.status] || '#64748B', 0.1),
+                    color: statusColors[selectedDetailItem.status] || '#64748B',
+                  }}
+                />
+              </Box>
+
+              <Divider sx={{ mb: 3 }} />
+
+              {/* Metadata Details */}
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary', mb: 1.5 }}>
+                General Information
+              </Typography>
+              <Grid container spacing={2} sx={{ mb: 4 }}>
+                <Grid size={6}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Connector</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{selectedDetailItem.connector}</Typography>
+                </Grid>
+                <Grid size={6}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Trigger Type</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{selectedDetailItem.triggerType}</Typography>
+                </Grid>
+                {isOutput ? (
+                  <>
+                    <Grid size={6}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>Pipeline Mode</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {selectedDetailItem.type === 'QUERY_BUILDER' ? 'SQL Query Builder' : 'Input Interfaces'}
+                      </Typography>
+                    </Grid>
+                    <Grid size={6}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>Export Format</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: brand.success }}>
+                        {selectedDetailItem.exportFormat || 'JSON'}
+                      </Typography>
+                    </Grid>
+                    {selectedDetailItem.type === 'QUERY_BUILDER' ? (
+                      <Grid size={12}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>Custom SQL Query</Typography>
+                        <Box sx={{ p: 1.5, bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider', borderRadius: '8px', fontFamily: 'monospace', fontSize: '0.75rem', color: brand.accent, mt: 0.5, whiteSpace: 'pre-wrap' }}>
+                          {selectedDetailItem.sqlQuery || 'SELECT * FROM ...'}
+                        </Box>
+                      </Grid>
+                    ) : (
+                      <Grid size={12}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>Aggregate Input Sources</Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
+                          {(selectedDetailItem.selectedInputs || []).map((id: string) => {
+                            const match = inputs.find(i => i.id === id);
+                            return (
+                              <Chip key={id} label={match ? match.name : id} size="small" variant="outlined" />
+                            );
+                          })}
+                          {(!selectedDetailItem.selectedInputs || selectedDetailItem.selectedInputs.length === 0) && (
+                            <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary', fontSize: '0.8rem' }}>
+                              No inputs selected (Default mock output used)
+                            </Typography>
+                          )}
+                        </Box>
+                      </Grid>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Grid size={6}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>S3 Bucket Location</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: 'monospace', fontSize: '0.75rem', color: brand.primary }}>
+                        {details.s3Path}
+                      </Typography>
+                    </Grid>
+                    <Grid size={6}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>Estimated File Size</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{details.fileSize}</Typography>
+                    </Grid>
+                  </>
+                )}
+              </Grid>
+
+              {/* Fields / Schema Table */}
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary', mb: 1.5 }}>
+                Source Schema Details (Fields & Types)
+              </Typography>
+              <TableContainer sx={{ mb: 4, border: '1px solid', borderColor: 'divider', borderRadius: '12px', width: 556, maxWidth: 556, overflowX: 'auto' }}>
+                <Table size="small">
+                  <TableHead sx={{ bgcolor: 'action.hover' }}>
+                    <TableRow>
+                      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>Field</TableCell>
+                      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>Type</TableCell>
+                      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>Key</TableCell>
+                      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>Length</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {(() => {
+                      const activePkName = selectedPKs[selectedDetailItem.id] || activeFields.find(field => field.isPk)?.name;
+                      return activeFields.map((f: any) => (
+                        <TableRow key={f.name}>
+                          <TableCell sx={{ py: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>{f.name}</Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem' }}>{f.desc}</Typography>
+                          </TableCell>
+                          <TableCell sx={{ py: 1 }}>
+                            <Chip label={f.type} size="small" sx={{ fontSize: '0.65rem', height: 18 }} />
+                          </TableCell>
+                          <TableCell sx={{ py: 1 }}>
+                            <Radio
+                              checked={f.name === activePkName}
+                              onChange={() => handleSelectPrimaryKey(selectedDetailItem.id, f.name)}
+                              size="small"
+                              sx={{ p: 0 }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ py: 1, fontSize: '0.75rem' }}>{f.length}</TableCell>
+                        </TableRow>
+                      ));
+                    })()}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Sample Data Preview */}
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary', mb: 1.5 }}>
+                Sample Ingestion Rows Preview
+              </Typography>
+              <Box
+                sx={{
+                  flex: 1,
+                  maxHeight: 250,
+                  width: 556,
+                  maxWidth: 556,
+                  overflow: 'auto',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: '12px',
+                  bgcolor: (theme) => alpha(theme.palette.background.default, 0.4),
+                }}
+              >
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      {Object.keys(activeSample[0] || {}).map((key) => (
+                        <TableCell key={key} sx={{ fontSize: '0.72rem', py: 1, fontWeight: 700, whiteSpace: 'nowrap', bgcolor: 'action.hover' }}>
+                          {key}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {activeSample.map((row: any, idx: number) => (
+                      <TableRow key={idx} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
+                        {Object.keys(activeSample[0] || {}).map((key) => (
+                          <TableCell key={key} sx={{ fontSize: '0.72rem', py: 1, whiteSpace: 'nowrap', color: 'text.secondary' }}>
+                            {typeof row[key] === 'object' && row[key] !== null ? JSON.stringify(row[key]) : String(row[key])}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
+
+              {/* Actions */}
+              <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    disabled={runningId === selectedDetailItem.id}
+                    onClick={() => handleRunInterface(selectedDetailItem.id, selectedDetailItem.name)}
+                    sx={{
+                      position: 'relative',
+                      ...(runningId === selectedDetailItem.id && {
+                        color: 'transparent',
+                      })
+                    }}
+                  >
+                    {runningId === selectedDetailItem.id 
+                      ? (isOutput ? 'Running Export...' : 'Running Ingestion...') 
+                      : (isOutput ? 'Run Export Pipeline' : 'Run Ingestion Pipeline')}
+                  </Button>
+
+                  {(justExecutedIds[selectedDetailItem.id] || selectedDetailItem.lastRun !== 'Never') && (
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      sx={{
+                        bgcolor: brand.success,
+                        '&:hover': { bgcolor: alpha(brand.success, 0.85) }
+                      }}
+                      onClick={() => handleDownloadIngestedData(selectedDetailItem)}
+                    >
+                      {isOutput ? 'Download Processed File' : 'Download Ingested Data'}
+                    </Button>
+                  )}
+                </Box>
+                
+                <Button fullWidth variant="outlined" onClick={() => setDetailOpen(false)}>
+                  Close Details
+                </Button>
+              </Box>
+            </Box>
+          );
+        })()}
+      </Drawer>
     </Box>
   );
 };

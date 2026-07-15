@@ -109,7 +109,10 @@ const availableUsers = [
 ];
 
 const DomainsPage: React.FC = () => {
-  const [domains, setDomains] = useState(initialDomains);
+  const [domains, setDomains] = useState<any[]>(() => {
+    const saved = localStorage.getItem('df_domains');
+    return saved ? JSON.parse(saved) : initialDomains;
+  });
   const [search, setSearch] = useState('');
   
   // Dialog Open States
@@ -147,6 +150,11 @@ const DomainsPage: React.FC = () => {
     return matchSearch && (!dom.restricted || dom.name === userDomain);
   });
 
+  const saveDomains = (updatedDoms: any[]) => {
+    setDomains(updatedDoms);
+    localStorage.setItem('df_domains', JSON.stringify(updatedDoms));
+  };
+
   const handleCreate = () => {
     if (!name.trim() || !code.trim()) {
       showToast('Name and Code are required', 'error');
@@ -165,7 +173,7 @@ const DomainsPage: React.FC = () => {
       memberEmails: [],
     };
 
-    setDomains([...domains, newDom]);
+    saveDomains([...domains, newDom]);
     setCreateOpen(false);
     resetForm();
     showToast(`Domain "${newDom.name}" created successfully.`, 'success');
@@ -186,19 +194,18 @@ const DomainsPage: React.FC = () => {
       return;
     }
 
-    setDomains(
-      domains.map((dom) =>
-        dom.id === selectedDomainId
-          ? {
-              ...dom,
-              name,
-              code: code.toUpperCase().replace(/\s+/g, '_'),
-              description,
-              restricted,
-            }
-          : dom
-      )
+    const updated = domains.map((dom) =>
+      dom.id === selectedDomainId
+        ? {
+            ...dom,
+            name,
+            code: code.toUpperCase().replace(/\s+/g, '_'),
+            description,
+            restricted,
+          }
+        : dom
     );
+    saveDomains(updated);
     setEditOpen(false);
     resetForm();
     showToast(`Domain was updated successfully.`, 'success');
@@ -219,26 +226,24 @@ const DomainsPage: React.FC = () => {
   };
 
   const handleSaveMembers = () => {
-    setDomains(
-      domains.map((dom) =>
-        dom.id === selectedDomainId
-          ? {
-              ...dom,
-              memberEmails: tempMemberEmails,
-              membersCount: tempMemberEmails.length,
-            }
-          : dom
-      )
+    const updated = domains.map((dom) =>
+      dom.id === selectedDomainId
+        ? {
+            ...dom,
+            memberEmails: tempMemberEmails,
+            membersCount: tempMemberEmails.length,
+          }
+        : dom
     );
+    saveDomains(updated);
     setMembersOpen(false);
     showToast('Domain membership updated successfully.', 'success');
   };
 
   const handleDeleteDomain = (id: string, domName: string) => {
-    if (confirm(`Are you sure you want to delete the domain "${domName}"?`)) {
-      setDomains(domains.filter((dom) => dom.id !== id));
-      showToast(`Domain "${domName}" deleted.`, 'info');
-    }
+    const updated = domains.filter((dom) => dom.id !== id);
+    saveDomains(updated);
+    showToast(`Domain "${domName}" deleted successfully.`, 'info');
   };
 
   const resetForm = () => {

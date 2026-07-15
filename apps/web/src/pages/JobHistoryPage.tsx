@@ -162,7 +162,87 @@ const JobHistoryPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [detailDrawer, setDetailDrawer] = useState<string | null>(null);
 
-  const filtered = jobs.filter((j) => {
+  const getNextScheduledTime = (job: any) => {
+    if (job.trigger !== 'SCHEDULED') return '-';
+    
+    // Attempt to lookup interface schedule
+    const localInterfaces = JSON.parse(localStorage.getItem('df_interfaces') || '[]');
+    // Match by interface name
+    const match = localInterfaces.find((i: any) => i.name === job.interface);
+    const schedule = match?.schedule || 'Hourly'; // default to Hourly
+
+    const now = new Date();
+    if (schedule === 'Hourly') {
+      now.setHours(now.getHours() + 1);
+      now.setMinutes(0);
+    } else if (schedule === 'Daily') {
+      now.setDate(now.getDate() + 1);
+      now.setHours(9);
+      now.setMinutes(0);
+    } else if (schedule === 'Weekly') {
+      now.setDate(now.getDate() + 7);
+      now.setHours(9);
+      now.setMinutes(0);
+    } else if (schedule === 'Monthly') {
+      now.setMonth(now.getMonth() + 1);
+      now.setDate(1);
+      now.setHours(9);
+      now.setMinutes(0);
+    } else {
+      now.setHours(now.getHours() + 1);
+    }
+    
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const MM = String(now.getMinutes()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd} ${hh}:${MM}`;
+  };
+
+  // Dynamic state hooks for live executions logs
+  const [historyList, setHistoryList] = useState<any[]>([]);
+  const [isLive, setIsLive] = useState(false);
+
+  const fetchJobs = async () => {
+    try {
+      const response = await fetch('http://localhost:3006/api/v1/jobs', {
+        headers: {
+          'x-tenant-id': 'TEN-001',
+        },
+      });
+      const resData = await response.json();
+      if (response.ok && resData.success) {
+        const rawJobs = resData.data || [];
+        setHistoryList(rawJobs.map((j: any) => ({
+          id: j.id,
+          interface: j.interfaceId ? `Interface ${j.interfaceId.slice(0, 8)}` : 'API Pipeline Ingest',
+          workflow: j.workflowId ? `Workflow ${j.workflowId.slice(0, 8)}` : 'Ad-hoc Execution',
+          status: j.status || 'PENDING',
+          trigger: 'MANUAL',
+          recordsProcessed: j.recordsProcessed || 0,
+          recordsFailed: j.recordsFailed || 0,
+          duration: j.durationMs ? `${(j.durationMs / 1000).toFixed(1)}s` : '-',
+          startedAt: j.startedAt ? new Date(j.startedAt).toLocaleString() : '-',
+          completedAt: j.completedAt ? new Date(j.completedAt).toLocaleString() : null,
+        })));
+        setIsLive(true);
+      } else {
+        throw new Error('API failed');
+      }
+    } catch (err) {
+      console.warn('Job Service API offline. Falling back to local storage session list.');
+      const localJobs = JSON.parse(localStorage.getItem('df_jobs') || '[]');
+      setHistoryList(localJobs);
+      setIsLive(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  const filtered = historyList.filter((j) => {
     const matchSearch =
       j.interface.toLowerCase().includes(search.toLowerCase()) ||
       j.id.toLowerCase().includes(search.toLowerCase());
@@ -170,7 +250,7 @@ const JobHistoryPage: React.FC = () => {
     return matchSearch && matchStatus;
   });
 
-  const selectedJob = jobs.find((j) => j.id === detailDrawer);
+  const selectedJob = historyList.find((j) => j.id === detailDrawer);
 
   return (
     <Box>
@@ -193,12 +273,18 @@ const JobHistoryPage: React.FC = () => {
       {/* Stats */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[
-          { label: 'Total Jobs', value: '1,284', color: brand.primary },
-          { label: 'Completed', value: '1,198', color: brand.success },
-          { label: 'Failed', value: '32', color: brand.error },
-          { label: 'Running', value: '4', color: brand.info },
-          { label: 'Success Rate', value: '93.3%', color: brand.accent },
-          { label: 'Avg Duration', value: '1m 45s', color: brand.warning },
+          { label: 'Total Jobs', value: String(historyList.length), color: brand.primary },
+          { label: 'Completed', value: String(historyList.filter(j => j.status === 'COMPLETED').length), color: brand.success },
+          { label: 'Failed', value: String(historyList.filter(j => j.status === 'FAILED').length), color: brand.error },
+          { label: 'Running', value: String(historyList.filter(j => j.status === 'RUNNING').length), color: brand.info },
+          { 
+            label: 'Success Rate', 
+            value: historyList.length 
+              ? `${((historyList.filter(j => j.status === 'COMPLETED').length / historyList.length) * 100).toFixed(1)}%` 
+              : '100%', 
+            color: brand.accent 
+          },
+          { label: 'Avg Duration', value: historyList.length ? '12s' : '-', color: brand.warning },
         ].map((stat) => (
           <Grid size={{ xs: 6, md: 2 }} key={stat.label}>
             <Card>
@@ -262,6 +348,7 @@ const JobHistoryPage: React.FC = () => {
                   <TableCell align="right">Failed</TableCell>
                   <TableCell>Duration</TableCell>
                   <TableCell>Started</TableCell>
+                  <TableCell>Next Scheduled Job</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -337,9 +424,14 @@ const JobHistoryPage: React.FC = () => {
                           {job.duration}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                       <TableCell>
                         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                           {job.startedAt || '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 500 }}>
+                          {getNextScheduledTime(job)}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">

@@ -4,6 +4,7 @@
 // ============================================================================
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -159,11 +160,88 @@ const getStatusIcon = (status: string) => {
     case 'COMPLETED': return <CheckCircleOutlined sx={{ fontSize: 16 }} />;
     case 'RUNNING': return <PlayArrowOutlined sx={{ fontSize: 16 }} />;
     case 'FAILED': return <ErrorOutlined sx={{ fontSize: 16 }} />;
-    default: return <ScheduleOutlined sx={{ fontSize: 16 }} />;
   }
 };
 
 const HomePage: React.FC = () => {
+  const navigate = useNavigate();
+  const [stats, setStats] = React.useState({
+    totalInterfaces: 12,
+    successJobs: 1284,
+    recordsProcessed: '2.4M',
+    avgThroughput: '15.2K',
+    jobs: [] as any[]
+  });
+
+  React.useEffect(() => {
+    // 1. Interfaces count (live custom count + fallback defaults if empty)
+    const localInterfaces = JSON.parse(localStorage.getItem('df_interfaces') || '[]');
+    const totalDoms = JSON.parse(localStorage.getItem('df_domains') || '[]');
+    const totalConns = JSON.parse(localStorage.getItem('df_connectors') || '[]');
+
+    const baseInterfacesCount = localInterfaces.length > 0 ? localInterfaces.length : 8;
+
+    // 2. Jobs count
+    const localJobs = JSON.parse(localStorage.getItem('df_jobs') || '[]');
+    
+    // Default mock jobs to display when no jobs have run
+    const defaultMockJobs = [
+      { id: 'JOB-1284', interface: 'Salesforce → PostgreSQL Sync', status: 'COMPLETED', recordsProcessed: 12450, duration: '2m 34s', startedAt: '5 min ago' },
+      { id: 'JOB-1283', interface: 'SAP Invoice Import', status: 'RUNNING', recordsProcessed: 8231, duration: '1m 12s', startedAt: '8 min ago' },
+      { id: 'JOB-1282', interface: 'CSV Upload Processing', status: 'COMPLETED', recordsProcessed: 5678, duration: '45s', startedAt: '15 min ago' },
+      { id: 'JOB-1281', interface: 'API Data Extraction', status: 'FAILED', recordsProcessed: 0, duration: '12s', startedAt: '22 min ago' },
+      { id: 'JOB-1280', interface: 'ServiceNow Ticket Export', status: 'COMPLETED', recordsProcessed: 3421, duration: '1m 5s', startedAt: '30 min ago' },
+    ];
+
+    const mergedJobsList = localJobs.length > 0 ? localJobs.map((j: any) => ({
+      id: j.id,
+      name: j.interface,
+      status: j.status,
+      records: j.recordsProcessed !== undefined ? j.recordsProcessed.toLocaleString() : (j.records || '0'),
+      duration: j.duration,
+      time: j.startedAt || 'Just now',
+      rawRecords: Number(j.recordsProcessed) || 0
+    })) : defaultMockJobs.map((j: any) => ({
+      id: j.id,
+      name: j.interface,
+      status: j.status,
+      records: j.recordsProcessed.toLocaleString(),
+      duration: j.duration,
+      time: j.startedAt,
+      rawRecords: j.recordsProcessed
+    }));
+
+    // Successful jobs calculation
+    const completedJobs = mergedJobsList.filter(j => j.status === 'COMPLETED').length;
+    const successCount = localJobs.length > 0 ? completedJobs : 1284;
+
+    // Total records calculation
+    const totalRecordsVal = mergedJobsList.reduce((acc, j) => acc + (j.rawRecords || 0), 0);
+    let recordsCountText = '2.4M';
+    if (localJobs.length > 0) {
+      if (totalRecordsVal >= 1000000) {
+        recordsCountText = `${(totalRecordsVal / 1000000).toFixed(1)}M`;
+      } else if (totalRecordsVal >= 1000) {
+        recordsCountText = `${(totalRecordsVal / 1000).toFixed(1)}K`;
+      } else {
+        recordsCountText = String(totalRecordsVal);
+      }
+    }
+
+    // Avg throughput calculation
+    const avgValText = localJobs.length > 0
+      ? (totalRecordsVal >= 1000 ? `${((totalRecordsVal / 180) || 5.2).toFixed(1)}K` : `${(totalRecordsVal / 2).toFixed(0)}`)
+      : '15.2K';
+
+    setStats({
+      totalInterfaces: baseInterfacesCount,
+      successJobs: successCount,
+      recordsProcessed: recordsCountText,
+      avgThroughput: avgValText,
+      jobs: mergedJobsList.slice(0, 5)
+    });
+  }, []);
+
   return (
     <Box>
       {/* Welcome Section */}
@@ -181,7 +259,7 @@ const HomePage: React.FC = () => {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <KPICard
             title="Total Integrations"
-            value="48"
+            value={String(stats.totalInterfaces)}
             change="↑ 12%"
             changeType="up"
             icon={<IntegrationInstructionsOutlined />}
@@ -191,7 +269,7 @@ const HomePage: React.FC = () => {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <KPICard
             title="Successful Jobs"
-            value="1,284"
+            value={String(stats.successJobs)}
             change="↑ 8%"
             changeType="up"
             icon={<CheckCircleOutlined />}
@@ -201,7 +279,7 @@ const HomePage: React.FC = () => {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <KPICard
             title="Records Processed"
-            value="2.4M"
+            value={stats.recordsProcessed}
             change="↑ 24%"
             changeType="up"
             icon={<StorageOutlined />}
@@ -211,7 +289,7 @@ const HomePage: React.FC = () => {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <KPICard
             title="Avg. Throughput"
-            value="15.2K"
+            value={stats.avgThroughput}
             change="↑ 5%"
             changeType="up"
             icon={<SpeedOutlined />}
@@ -247,12 +325,13 @@ const HomePage: React.FC = () => {
                   size="small"
                   endIcon={<ArrowForwardOutlined />}
                   sx={{ fontSize: '0.8rem' }}
+                  onClick={() => navigate('/jobs')}
                 >
                   View All
                 </Button>
               </Box>
               <Divider />
-              {recentJobs.map((job, index) => (
+              {stats.jobs.map((job, index) => (
                 <Box key={job.id}>
                   <Box
                     sx={{
@@ -302,7 +381,7 @@ const HomePage: React.FC = () => {
                       {job.time}
                     </Typography>
                   </Box>
-                  {index < recentJobs.length - 1 && <Divider sx={{ mx: 2.5 }} />}
+                  {index < stats.jobs.length - 1 && <Divider sx={{ mx: 2.5 }} />}
                 </Box>
               ))}
             </CardContent>
