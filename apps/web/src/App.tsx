@@ -20,6 +20,7 @@ import SettingsPage from './pages/SettingsPage';
 import ConnectorsPage from './pages/ConnectorsPage';
 import MonitoringPage from './pages/MonitoringPage';
 import LoginPage from './pages/LoginPage';
+import PublicExportPage from './pages/PublicExportPage';
 import { Auth0ProviderWithHistory } from './components/auth/Auth0ProviderWithHistory';
 
 // Route protection guard
@@ -37,6 +38,7 @@ const App: React.FC = () => {
           <Auth0ProviderWithHistory>
             <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/public-export/:id" element={<PublicExportPage />} />
             
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<MainLayout />}>

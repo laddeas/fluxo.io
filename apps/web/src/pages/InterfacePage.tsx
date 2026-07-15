@@ -62,6 +62,7 @@ import {
   InputOutlined,
   OutputOutlined,
   ContentCopyOutlined,
+  ShareOutlined,
 } from '@mui/icons-material';
 import { brand } from '../theme/theme';
 
@@ -1844,6 +1845,23 @@ const InterfacePage: React.FC = () => {
                     </Button>
                   )}
                 </Box>
+
+                {isOutput && (justExecutedIds[selectedDetailItem.id] || selectedDetailItem.lastRun !== 'Never') && (
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    startIcon={<ShareOutlined />}
+                    onClick={() => {
+                      const shareUrl = `${window.location.protocol}//${window.location.host}/public-export/${selectedDetailItem.id}`;
+                      navigator.clipboard.writeText(shareUrl);
+                      setSnackbarMessage('Shareable dataset link copied to clipboard!');
+                      setSnackbarSeverity('success');
+                      setSnackbarOpen(true);
+                    }}
+                  >
+                    Copy Shareable Link
+                  </Button>
+                )}
                 
                 <Button fullWidth variant="outlined" onClick={() => setDetailOpen(false)}>
                   Close Details
