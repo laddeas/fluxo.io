@@ -173,6 +173,8 @@ const statusColors: Record<string, string> = {
   DRAFT: brand.warning,
   ERROR: brand.error,
   INACTIVE: '#64748B',
+  PENDING_APPROVAL: brand.warning,
+  REJECTED: brand.error,
 };
 
 const typeIcons: Record<string, React.ReactElement> = {
@@ -311,6 +313,10 @@ const InterfacePage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [createOpen, setCreateOpen] = useState(false);
+
+  const [userRole, setUserRole] = useState<'DOMAIN_ADMIN' | 'INTEGRATION_DEVELOPER'>(() => {
+    return (localStorage.getItem('df_user_role') as any) || 'DOMAIN_ADMIN';
+  });
 
   // Live API Connection state
   const [isLive, setIsLive] = useState(false);
@@ -786,7 +792,6 @@ const InterfacePage: React.FC = () => {
       scheduleConfig: {},
       schemaConfig: { 
         description,
-        // Save export-specific metadata fields
         sqlQuery: isOutputTab ? sqlQuery : undefined,
         selectedInputs: isOutputTab ? selectedInputIds : undefined,
         exportFormat: isOutputTab ? exportFormat : undefined
@@ -822,13 +827,12 @@ const InterfacePage: React.FC = () => {
         name: name,
         type: payload.type,
         connector: payload.connectorId,
-        status: 'ACTIVE',
+        status: 'PENDING_APPROVAL',
         triggerType: payload.triggerType,
         schedule: triggerType === 'SCHEDULED' ? 'Hourly' : 'Manual',
         lastRun: 'Never',
         records: '0',
         icon: tab === 0 ? (sourceType === 'FILE_SYSTEM' ? '📄' : '☁️') : '🏢',
-        // Persist configs
         selectedInputs: payload.schemaConfig.selectedInputs,
         sqlQuery: payload.schemaConfig.sqlQuery,
         exportFormat: payload.schemaConfig.exportFormat,
@@ -845,7 +849,7 @@ const InterfacePage: React.FC = () => {
         setOutputs([newItem, ...outputs]);
       }
 
-      setSnackbarMessage(`Interface "${name}" created (Simulated Session Saved).`);
+      setSnackbarMessage(`Interface "${name}" created (Pending Admin Approval).`);
       setSnackbarSeverity('info');
       setSnackbarOpen(true);
     }
@@ -863,7 +867,6 @@ const InterfacePage: React.FC = () => {
     setSqlQuery('');
     setExportFormat('JSON');
   };
-
   const handleRunInterface = async (id: string, name: string) => {
     // Set executing state for spinner
     setRunningId(id);
@@ -952,6 +955,32 @@ const InterfacePage: React.FC = () => {
     }, 1500);
   };
 
+  const handleApproveStatus = (id: string, newStatus: 'ACTIVE' | 'REJECTED') => {
+    const updateList = (list: any[]) =>
+      list.map((item) => (item.id === id ? { ...item, status: newStatus } : item));
+    
+    setInputs(prev => updateList(prev));
+    setOutputs(prev => updateList(prev));
+
+    const localInterfaces = JSON.parse(localStorage.getItem('df_interfaces') || '[]');
+    const updatedInterfaces = localInterfaces.map((item: any) =>
+      item.id === id ? { ...item, status: newStatus } : item
+    );
+    localStorage.setItem('df_interfaces', JSON.stringify(updatedInterfaces));
+
+    if (selectedDetailItem && selectedDetailItem.id === id) {
+      setSelectedDetailItem({ ...selectedDetailItem, status: newStatus });
+    }
+
+    setSnackbarMessage(
+      newStatus === 'ACTIVE'
+        ? `Interface approved successfully! It is now active.`
+        : `Interface has been rejected.`
+    );
+    setSnackbarSeverity(newStatus === 'ACTIVE' ? 'success' : 'info');
+    setSnackbarOpen(true);
+  };
+
   return (
     <Box>
       {/* Hidden File Input */}
@@ -972,6 +1001,33 @@ const InterfacePage: React.FC = () => {
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
             Manage data ingestion and export interfaces
           </Typography>
+          <Box sx={{ mt: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+              Simulate Role:
+            </Typography>
+            <Chip
+              label="Domain Admin"
+              size="small"
+              onClick={() => {
+                setUserRole('DOMAIN_ADMIN');
+                localStorage.setItem('df_user_role', 'DOMAIN_ADMIN');
+              }}
+              color={userRole === 'DOMAIN_ADMIN' ? 'primary' : 'default'}
+              variant={userRole === 'DOMAIN_ADMIN' ? 'filled' : 'outlined'}
+              sx={{ fontSize: '0.7rem', fontWeight: 700 }}
+            />
+            <Chip
+              label="Integration Developer"
+              size="small"
+              onClick={() => {
+                setUserRole('INTEGRATION_DEVELOPER');
+                localStorage.setItem('df_user_role', 'INTEGRATION_DEVELOPER');
+              }}
+              color={userRole === 'INTEGRATION_DEVELOPER' ? 'primary' : 'default'}
+              variant={userRole === 'INTEGRATION_DEVELOPER' ? 'filled' : 'outlined'}
+              sx={{ fontSize: '0.7rem', fontWeight: 700 }}
+            />
+          </Box>
         </Box>
         <Button
           variant="contained"
@@ -1150,17 +1206,20 @@ const InterfacePage: React.FC = () => {
                       </TableCell>
                       <TableCell align="right">
                         <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                          <Tooltip title="Execute">
-                            <IconButton
-                              size="small"
-                              sx={{ color: brand.success }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRunInterface(item.id, item.name);
-                              }}
-                            >
-                              <PlayArrowOutlined fontSize="small" />
-                            </IconButton>
+                          <Tooltip title={item.status === 'PENDING_APPROVAL' ? "Pending Admin Approval" : item.status === 'REJECTED' ? "Rejected" : "Execute"}>
+                            <span>
+                              <IconButton
+                                size="small"
+                                disabled={item.status === 'PENDING_APPROVAL' || item.status === 'REJECTED'}
+                                sx={{ color: brand.success }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRunInterface(item.id, item.name);
+                                }}
+                              >
+                                <PlayArrowOutlined fontSize="small" />
+                              </IconButton>
+                            </span>
                           </Tooltip>
                           <Tooltip title="View">
                             <IconButton
@@ -1812,12 +1871,58 @@ const InterfacePage: React.FC = () => {
               </Box>
 
               {/* Actions */}
+              {selectedDetailItem.status === 'PENDING_APPROVAL' && (
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 2,
+                    borderRadius: '12px',
+                    border: '1px solid',
+                    borderColor: 'warning.main',
+                    bgcolor: (theme) => alpha(theme.palette.warning.main, 0.05),
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'warning.main', mb: 1 }}>
+                    Approval Request Pending
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
+                    This interface requires a Domain Admin's approval before it can be run or exported.
+                  </Typography>
+                  {userRole === 'DOMAIN_ADMIN' ? (
+                    <Box sx={{ display: 'flex', gap: 1.5 }}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="success"
+                        onClick={() => handleApproveStatus(selectedDetailItem.id, 'ACTIVE')}
+                        sx={{ flex: 1 }}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        onClick={() => handleApproveStatus(selectedDetailItem.id, 'REJECTED')}
+                        sx={{ flex: 1 }}
+                      >
+                        Reject
+                      </Button>
+                    </Box>
+                  ) : (
+                    <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                      Switch simulation role to Domain Admin at the top of the page to approve/reject.
+                    </Typography>
+                  )}
+                </Box>
+              )}
+
               <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <Button
                     fullWidth
                     variant="contained"
-                    disabled={runningId === selectedDetailItem.id}
+                    disabled={runningId === selectedDetailItem.id || selectedDetailItem.status === 'PENDING_APPROVAL' || selectedDetailItem.status === 'REJECTED'}
                     onClick={() => handleRunInterface(selectedDetailItem.id, selectedDetailItem.name)}
                     sx={{
                       position: 'relative',
@@ -1828,6 +1933,10 @@ const InterfacePage: React.FC = () => {
                   >
                     {runningId === selectedDetailItem.id 
                       ? (isOutput ? 'Running Export...' : 'Running Ingestion...') 
+                      : selectedDetailItem.status === 'PENDING_APPROVAL'
+                      ? 'Awaiting Approval'
+                      : selectedDetailItem.status === 'REJECTED'
+                      ? 'Rejected'
                       : (isOutput ? 'Run Export Pipeline' : 'Run Ingestion Pipeline')}
                   </Button>
 
