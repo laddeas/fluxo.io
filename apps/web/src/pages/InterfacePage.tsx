@@ -344,6 +344,13 @@ const InterfacePage: React.FC = () => {
   // Duplicate custom name dialog states
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [duplicateName, setDuplicateName] = useState('');
+  const [duplicateDescription, setDuplicateDescription] = useState('');
+  const [duplicateConnector, setDuplicateConnector] = useState('');
+  const [duplicateType, setDuplicateType] = useState('');
+  const [duplicateTriggerType, setDuplicateTriggerType] = useState('MANUAL');
+  const [duplicateSqlQuery, setDuplicateSqlQuery] = useState('');
+  const [duplicateSelectedInputs, setDuplicateSelectedInputs] = useState<string[]>([]);
+  const [duplicateExportFormat, setDuplicateExportFormat] = useState('JSON');
 
   // Edit/Rename existing interface dialog states
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -422,8 +429,17 @@ const InterfacePage: React.FC = () => {
           ...original,
           id: newId,
           name: duplicateName.trim() || `Copy of ${original.name}`,
+          connector: duplicateConnector,
+          type: duplicateType,
+          triggerType: duplicateTriggerType,
+          schedule: duplicateTriggerType === 'SCHEDULED' ? 'Hourly' : 'Manual',
+          status: 'PENDING_APPROVAL',
           lastRun: 'Never',
           records: '0',
+          selectedInputs: duplicateSelectedInputs,
+          sqlQuery: duplicateSqlQuery,
+          exportFormat: duplicateExportFormat,
+          schemaConfig: { description: duplicateDescription }
         };
         const updated = [duplicated, ...localData];
         localStorage.setItem('df_interfaces', JSON.stringify(updated));
@@ -436,7 +452,7 @@ const InterfacePage: React.FC = () => {
           setOutputs([duplicated, ...outputs]);
         }
 
-        setSnackbarMessage(`Duplicated interface to "${duplicated.name}"`);
+        setSnackbarMessage(`Duplicated interface to "${duplicated.name}" (Awaiting Approval).`);
         setSnackbarSeverity('success');
         setSnackbarOpen(true);
       }
@@ -1283,7 +1299,20 @@ const InterfacePage: React.FC = () => {
         slotProps={{ paper: { sx: { width: 180, borderRadius: '12px' } } }}
       >
         <MenuItem onClick={() => {
-          setDuplicateName(selectedMenuName ? `Copy of ${selectedMenuName}` : '');
+          if (selectedMenuId) {
+            const localData = JSON.parse(localStorage.getItem('df_interfaces') || '[]');
+            const original = localData.find((i: any) => i.id === selectedMenuId) || inputs.find(i => i.id === selectedMenuId) || outputs.find(i => i.id === selectedMenuId);
+            if (original) {
+              setDuplicateName(`Copy of ${original.name}`);
+              setDuplicateDescription(original.description || original.schemaConfig?.description || '');
+              setDuplicateConnector(original.connector || '');
+              setDuplicateType(original.type || '');
+              setDuplicateTriggerType(original.triggerType || 'MANUAL');
+              setDuplicateSqlQuery(original.sqlQuery || '');
+              setDuplicateSelectedInputs(original.selectedInputs || []);
+              setDuplicateExportFormat(original.exportFormat || 'JSON');
+            }
+          }
           setMenuAnchor(null);
           setDuplicateDialogOpen(true);
         }}>
@@ -1350,22 +1379,190 @@ const InterfacePage: React.FC = () => {
           setSelectedMenuId(null);
           setSelectedMenuName(null);
         }}
-        maxWidth="xs"
+        maxWidth="sm"
         fullWidth
       >
         <DialogTitle sx={{ fontWeight: 700 }}>
           Duplicate Interface
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
-          <Box sx={{ mt: 1 }}>
-            <TextField
-              fullWidth
-              label="Interface Name"
-              value={duplicateName}
-              onChange={(e) => setDuplicateName(e.target.value)}
-              placeholder="e.g. Copy of Interface"
-            />
-          </Box>
+          <Grid container spacing={2} sx={{ mt: 0 }}>
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                label="Interface Name"
+                value={duplicateName}
+                onChange={(e) => setDuplicateName(e.target.value)}
+                placeholder="e.g. Copy of Interface"
+              />
+            </Grid>
+
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                multiline
+                rows={2}
+                value={duplicateDescription}
+                onChange={(e) => setDuplicateDescription(e.target.value)}
+              />
+            </Grid>
+
+            {/* Check if it is an Output interface based on selectedMenuId split */}
+            {selectedMenuId && selectedMenuId.startsWith('OUT') ? (
+              <>
+                <Grid size={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Source Mode</InputLabel>
+                    <Select
+                      label="Source Mode"
+                      value={duplicateType || 'INPUT_INTERFACES'}
+                      onChange={(e) => {
+                        setDuplicateType(e.target.value);
+                        if (e.target.value === 'QUERY_BUILDER') {
+                          setDuplicateSelectedInputs([]);
+                        } else {
+                          setDuplicateSqlQuery('');
+                        }
+                      }}
+                    >
+                      <MenuItem value="INPUT_INTERFACES">Input Interface Sources</MenuItem>
+                      <MenuItem value="QUERY_BUILDER">SQL Query Builder</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Export Format</InputLabel>
+                    <Select
+                      label="Export Format"
+                      value={duplicateExportFormat}
+                      onChange={(e) => setDuplicateExportFormat(e.target.value)}
+                    >
+                      <MenuItem value="JSON">JSON (.json)</MenuItem>
+                      <MenuItem value="CSV">CSV (.csv)</MenuItem>
+                      <MenuItem value="TXT">Text (.txt)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {duplicateType === 'QUERY_BUILDER' ? (
+                  <Grid size={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={4}
+                      label="SQL Custom Query Builder"
+                      value={duplicateSqlQuery}
+                      onChange={(e) => setDuplicateSqlQuery(e.target.value)}
+                    />
+                  </Grid>
+                ) : (
+                  <Grid size={12}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.85rem' }}>
+                      Select Input Interfaces to Aggregate / Process:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 150, overflowY: 'auto', p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: '12px' }}>
+                      {inputs.map((inp) => (
+                        <FormControlLabel
+                          key={inp.id}
+                          control={
+                            <Checkbox
+                              checked={duplicateSelectedInputs.includes(inp.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setDuplicateSelectedInputs([...duplicateSelectedInputs, inp.id]);
+                                } else {
+                                  setDuplicateSelectedInputs(duplicateSelectedInputs.filter((id) => id !== inp.id));
+                                }
+                              }}
+                            />
+                          }
+                          label={`${inp.name} (${inp.connector})`}
+                        />
+                      ))}
+                    </Box>
+                  </Grid>
+                )}
+              </>
+            ) : (
+              <>
+                <Grid size={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Source Type</InputLabel>
+                    <Select
+                      label="Source Type"
+                      value={duplicateType}
+                      onChange={(e) => setDuplicateType(e.target.value)}
+                    >
+                      <MenuItem value="REST_API">REST API</MenuItem>
+                      <MenuItem value="DATABASE">Database</MenuItem>
+                      <MenuItem value="FILE_SYSTEM">File Upload</MenuItem>
+                      <MenuItem value="CLOUD_STORAGE">Cloud Storage</MenuItem>
+                      <MenuItem value="ENTERPRISE_APP">Enterprise App</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Connector</InputLabel>
+                    <Select
+                      label="Connector"
+                      value={duplicateConnector}
+                      onChange={(e) => setDuplicateConnector(e.target.value)}
+                    >
+                      {(() => {
+                        const filteredConns = registeredConnectors.filter((c) => {
+                          if (duplicateType === 'REST_API') return c.type === 'REST_API' || c.type === 'ENTERPRISE_APP';
+                          if (duplicateType === 'DATABASE') return c.type === 'DATABASE';
+                          if (duplicateType === 'CLOUD_STORAGE') return c.type === 'CLOUD_STORAGE';
+                          if (duplicateType === 'FILE_SYSTEM') return c.type === 'FILE_SYSTEM';
+                          return true;
+                        });
+                        if (filteredConns.length === 0) {
+                          if (duplicateType === 'REST_API') {
+                            return [
+                              <MenuItem key="rest" value="REST API">Default REST API</MenuItem>,
+                              <MenuItem key="sf" value="Salesforce">Salesforce</MenuItem>,
+                              <MenuItem key="sap" value="SAP">SAP</MenuItem>
+                            ];
+                          }
+                          if (duplicateType === 'DATABASE') {
+                            return <MenuItem key="pg" value="PostgreSQL">Default PostgreSQL</MenuItem>;
+                          }
+                          if (duplicateType === 'CLOUD_STORAGE') {
+                            return <MenuItem key="s3" value="AWS S3">Default AWS S3</MenuItem>;
+                          }
+                          if (duplicateType === 'FILE_SYSTEM') {
+                            return <MenuItem key="local" value="Local File">Local File Storage</MenuItem>;
+                          }
+                          return <MenuItem key="gen" value="General Connector">General Connector</MenuItem>;
+                        }
+                        return filteredConns.map((c) => (
+                          <MenuItem key={c.id} value={c.name}>{c.name}</MenuItem>
+                        ));
+                      })()}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </>
+            )}
+
+            <Grid size={12}>
+              <FormControl fullWidth>
+                <InputLabel>Trigger Type</InputLabel>
+                <Select
+                  label="Trigger Type"
+                  value={duplicateTriggerType}
+                  onChange={(e) => setDuplicateTriggerType(e.target.value)}
+                >
+                  <MenuItem value="MANUAL">Manual Trigger</MenuItem>
+                  <MenuItem value="SCHEDULED">Scheduled Interval</MenuItem>
+                  <MenuItem value="EVENT_BASED">Event-based Real-time</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button variant="outlined" onClick={() => {
