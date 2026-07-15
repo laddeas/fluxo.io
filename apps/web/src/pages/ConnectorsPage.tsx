@@ -232,6 +232,15 @@ const ConnectorsPage: React.FC = () => {
     showToast(`Connector "${name}" added successfully.`, 'success');
   };
 
+  const getInterfaceCount = (connectorName: string) => {
+    try {
+      const localInterfaces = JSON.parse(localStorage.getItem('df_interfaces') || '[]');
+      return localInterfaces.filter((i: any) => i.connector === connectorName).length;
+    } catch (e) {
+      return 0;
+    }
+  };
+
   const handleTestConnection = (connectorName: string) => {
     showToast(`Testing connection to ${connectorName}... Success!`, 'success');
   };
@@ -352,7 +361,7 @@ const ConnectorsPage: React.FC = () => {
                   <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
                     <Chip label={connector.type.replace(/_/g, ' ')} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 22 }} />
                     <Chip label={`v${connector.version}`} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 22 }} />
-                    <Chip label={`${connector.interfaces} interfaces`} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 22 }} />
+                    <Chip label={`${getInterfaceCount(connector.name)} interfaces`} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 22 }} />
                   </Box>
 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
