@@ -1,0 +1,198 @@
+# ============================================================================
+# DataFusion AI — Production Docker Compose Configuration (Coolify Optimized)
+# Defines all 9 NestJS Microservices & Shared Infrastructure Dependencies
+# ============================================================================
+
+version: '3.8'
+
+services:
+  # --------------------------------------------------------------------------
+  # 1. Databases & Infrastructure Dependencies
+  # --------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-datafusion}
+      POSTGRES_USER: ${DB_USER:-datafusion}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-datafusion_prod_password}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-datafusion}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD:-datafusion_redis_prod}
+    volumes:
+      - redis_prod_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-datafusion_redis_prod}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBIT_USER:-datafusion}
+      RABBITMQ_DEFAULT_PASS: ${RABBIT_PASSWORD:-datafusion_rabbit_prod}
+      RABBITMQ_DEFAULT_VHOST: ${RABBIT_VHOST:-datafusion}
+    volumes:
+      - rabbitmq_prod_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # --------------------------------------------------------------------------
+  # 2. NestJS Backend Microservices
+  # --------------------------------------------------------------------------
+  audit-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - SERVICE_PATH=audit-service
+        - START_COMMAND=node dist/services/audit-service/src/main.js
+    restart: always
+    depends_on:
+      - postgres
+      - rabbitmq
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-datafusion}:${DB_PASSWORD:-datafusion_prod_password}@postgres:5432/${DB_NAME:-datafusion}
+      RABBITMQ_URL: amqp://${RABBIT_USER:-datafusion}:${RABBIT_PASSWORD:-datafusion_rabbit_prod}@rabbitmq:5672/${RABBIT_VHOST:-datafusion}
+      PORT: 3001
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - SERVICE_PATH=auth-service
+        - START_COMMAND=node dist/services/auth-service/src/main.js
+    restart: always
+    depends_on:
+      - redis
+    environment:
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-datafusion_redis_prod}
+      PORT: 3002
+
+  connector-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - SERVICE_PATH=connector-service
+        - START_COMMAND=node dist/services/connector-service/src/main.js
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-datafusion}:${DB_PASSWORD:-datafusion_prod_password}@postgres:5432/${DB_NAME:-datafusion}
+      PORT: 3003
+
+  interface-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - SERVICE_PATH=interface-service
+        - START_COMMAND=node dist/services/interface-service/src/main.js
+    restart: always
+    depends_on:
+      - postgres
+      - rabbitmq
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-datafusion}:${DB_PASSWORD:-datafusion_prod_password}@postgres:5432/${DB_NAME:-datafusion}
+      RABBITMQ_URL: amqp://${RABBIT_USER:-datafusion}:${RABBIT_PASSWORD:-datafusion_rabbit_prod}@rabbitmq:5672/${RABBIT_VHOST:-datafusion}
+      PORT: 3004
+
+  job-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - SERVICE_PATH=job-service
+        - START_COMMAND=node dist/services/job-service/src/main.js
+    restart: always
+    depends_on:
+      - postgres
+      - rabbitmq
+      - redis
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-datafusion}:${DB_PASSWORD:-datafusion_prod_password}@postgres:5432/${DB_NAME:-datafusion}
+      RABBITMQ_URL: amqp://${RABBIT_USER:-datafusion}:${RABBIT_PASSWORD:-datafusion_rabbit_prod}@rabbitmq:5672/${RABBIT_VHOST:-datafusion}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-datafusion_redis_prod}
+      PORT: 3005
+
+  settings-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - SERVICE_PATH=settings-service
+        - START_COMMAND=node dist/services/settings-service/src/main.js
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-datafusion}:${DB_PASSWORD:-datafusion_prod_password}@postgres:5432/${DB_NAME:-datafusion}
+      PORT: 3006
+
+  tenant-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - SERVICE_PATH=tenant-service
+        - START_COMMAND=node dist/services/tenant-service/src/main.js
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-datafusion}:${DB_PASSWORD:-datafusion_prod_password}@postgres:5432/${DB_NAME:-datafusion}
+      PORT: 3007
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - SERVICE_PATH=user-service
+        - START_COMMAND=node dist/services/user-service/src/main.js
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-datafusion}:${DB_PASSWORD:-datafusion_prod_password}@postgres:5432/${DB_NAME:-datafusion}
+      PORT: 3008
+
+  workflow-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - SERVICE_PATH=workflow-service
+        - START_COMMAND=node dist/services/workflow-service/src/main.js
+    restart: always
+    depends_on:
+      - postgres
+      - rabbitmq
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-datafusion}:${DB_PASSWORD:-datafusion_prod_password}@postgres:5432/${DB_NAME:-datafusion}
+      RABBITMQ_URL: amqp://${RABBIT_USER:-datafusion}:${RABBIT_PASSWORD:-datafusion_rabbit_prod}@rabbitmq:5672/${RABBIT_VHOST:-datafusion}
+      PORT: 3009
+
+volumes:
+  postgres_prod_data:
+  redis_prod_data:
+  rabbitmq_prod_data:
