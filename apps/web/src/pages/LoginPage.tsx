@@ -54,7 +54,7 @@ const LoginPage: React.FC = () => {
     setLoading(true);
     try {
       // 1. Attempt Real-Time Auth Service Call
-      const response = await fetch('http://localhost:3001/api/v1/auth/login', {
+      const response = await fetch(`http://${window.location.hostname}:3001/api/v1/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

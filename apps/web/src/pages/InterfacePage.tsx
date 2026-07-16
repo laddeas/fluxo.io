@@ -668,7 +668,7 @@ const InterfacePage: React.FC = () => {
   // Fetch Live Interfaces on Mount
   const fetchInterfaces = async () => {
     try {
-      const response = await fetch('http://localhost:3005/api/v1/interfaces', {
+      const response = await fetch(`http://${window.location.hostname}:3005/api/v1/interfaces`, {
         headers: {
           'x-tenant-id': 'TEN-001',
         },
@@ -816,7 +816,7 @@ const InterfacePage: React.FC = () => {
 
     try {
       // 1. Post to live API if reachable
-      const response = await fetch('http://localhost:3005/api/v1/interfaces', {
+      const response = await fetch(`http://${window.location.hostname}:3005/api/v1/interfaces`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

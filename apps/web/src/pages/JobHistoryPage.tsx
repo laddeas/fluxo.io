@@ -206,7 +206,7 @@ const JobHistoryPage: React.FC = () => {
 
   const fetchJobs = async () => {
     try {
-      const response = await fetch('http://localhost:3006/api/v1/jobs', {
+      const response = await fetch(`http://${window.location.hostname}:3006/api/v1/jobs`, {
         headers: {
           'x-tenant-id': 'TEN-001',
         },
